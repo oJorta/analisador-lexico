@@ -1,3 +1,19 @@
+def verificar_aceitacao(lin, col, lexema_atual, estado):
+  token = ()
+  aceitacaoInt = [1, 2, 3, 9]
+  aceitacaoFloat = [5, 7]
+  aceitacaoEnd = [32]
+
+  if estado in aceitacaoInt:
+    token = (lin, col - len(lexema_atual), "TK_INT", lexema_atual)
+  elif estado in aceitacaoFloat:
+    token = (lin, col - len(lexema_atual), "TK_FLOAT", lexema_atual)
+  elif estado in aceitacaoEnd:
+    token = (lin, col - len(lexema_atual), "TK_END", lexema_atual)
+  
+  return token
+
+
 def ler_token(cadeia: str):
   """
   Essa é a função responsável por receber a cadeia de caracteres e retornar uma lista de tokens.
@@ -44,6 +60,10 @@ def ler_token(cadeia: str):
           estado = 7
         case 8:
           estado = 7
+        case 31:
+          estado = 32
+        case 32:
+          estado = 32
 
     elif (simbolo == "."):
       # Transições de estado ao consumir um ponto
@@ -68,16 +88,26 @@ def ler_token(cadeia: str):
       else:
         erro = True
 
+    elif (simbolo in ["A", "B", "C", "D", "E", "F"]):
+      print(estado)
+      if(estado == 0):
+        estado = 14
+      elif (estado == 31 or estado == 32):
+        estado = 32
+      else:
+        erro = True
+
+    elif (simbolo == "x"):
+      if (estado == 1 or estado == 14):
+        estado = 31
+      else:
+        erro = True
+
     elif (simbolo == " "):
       # Se encontrar um espaço, verificar se o estado atual é de aceitação para int ou float
-      if estado in aceitacaoInt:
-        tokens.append((lin, col - len(lexema_atual), "TK_INT", lexema_atual))
-        lexema_atual = ""
-        estado = 0
-        col += 1
-        continue
-      elif estado in aceitacaoFloat:
-        tokens.append((lin, col - len(lexema_atual), "TK_FLOAT", lexema_atual))
+      token = verificar_aceitacao(lin, col, lexema_atual, estado)
+      if (token):
+        tokens.append(token)
         lexema_atual = ""
         estado = 0
         col += 1
@@ -102,11 +132,9 @@ def ler_token(cadeia: str):
     col += 1
 
   # Verificar se o estado final é de aceitação para int ou float
-  if estado in aceitacaoInt:
-    tokens.append((lin, col - len(lexema_atual), "TK_INT", lexema_atual))
-    lexema_atual = ""
-  elif estado in aceitacaoFloat:
-    tokens.append((lin, col - len(lexema_atual), "TK_FLOAT", lexema_atual))
+  token = verificar_aceitacao(lin, col, lexema_atual, estado)
+  if (token):
+    tokens.append(token)
     lexema_atual = ""
   else:
     print(f"ERRO - Token não reconhecido: {lexema_atual} <")
@@ -131,7 +159,7 @@ def imprimir_tabela(tabela):
 
 
 def main():
-  cadeia = "123 235.12321e-10"
+  cadeia = "123 235.12321e-10 Ax321ABCDEFFFFF213"
   tokens = ler_token(cadeia)
   imprimir_tabela(tokens)
 
