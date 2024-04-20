@@ -3,6 +3,9 @@ def verificar_aceitacao(lin, col, lexema_atual, estado):
   aceitacaoInt = [1, 2, 3, 9]
   aceitacaoFloat = [5, 7]
   aceitacaoEnd = [32]
+  aceitacaoCadeia = [35]
+  aceitacaoId = [39, 40]
+  aceitacaoPalavraReservada = [54]
 
   if estado in aceitacaoInt:
     token = (lin, col - len(lexema_atual), "TK_INT", lexema_atual)
@@ -10,6 +13,12 @@ def verificar_aceitacao(lin, col, lexema_atual, estado):
     token = (lin, col - len(lexema_atual), "TK_FLOAT", lexema_atual)
   elif estado in aceitacaoEnd:
     token = (lin, col - len(lexema_atual), "TK_END", lexema_atual)
+  elif estado in aceitacaoCadeia:
+    token = (lin, col - len(lexema_atual), "TK_CADEIA", lexema_atual)
+  elif estado in aceitacaoId:
+    token = (lin, col - len(lexema_atual), "TK_ID", lexema_atual)
+  elif estado in aceitacaoPalavraReservada:
+    token = (lin, col - len(lexema_atual), f"TK_{lexema_atual.upper()}", lexema_atual)
   
   return token
 
@@ -23,10 +32,6 @@ def ler_token(cadeia: str):
   # Estado inicial do autômato
   estado = 0
 
-  # Estados de aceitação para inteiros e floats
-  aceitacaoInt = [1, 2, 3, 9]
-  aceitacaoFloat = [5, 7]
-
   # Inicialização de variáveis que serão utilizadas para construir a lista de tokens
   lin = 1
   col = 1
@@ -37,6 +42,46 @@ def ler_token(cadeia: str):
   erro = False
 
   for simbolo in cadeia:
+    if (simbolo == '"'):
+      if estado == 0:
+        estado = 34
+      elif estado == 34:
+        estado = 35
+        lexema_atual += simbolo
+        token = (lin, col - len(lexema_atual), "TK_CADEIA", lexema_atual)
+        if (token):
+          tokens.append(token)
+          estado = 0
+          col += 1
+          continue  
+        else:
+          erro = True
+      else:
+        erro = True
+
+    if (estado == 34):
+      lexema_atual += simbolo
+      col += 1
+      continue
+
+    if (simbolo.isalpha() and estado not in [1, 5, 14, 31, 32]):
+      if(estado == 0 and simbolo.islower()):
+        estado = 38
+      elif (estado == 38 and simbolo.isupper()):
+        estado = 39
+      elif (estado == 38 and simbolo.islower()):
+        estado = 54
+      elif (estado == 39 and simbolo.islower()):
+        estado = 40
+      elif (estado == 40 and simbolo.isupper()):
+        estado = 39
+      elif (estado == 5 and simbolo == 'e' or estado == 14 and simbolo == 'x' or estado == 54 and simbolo.islower() or estado == 0 and simbolo.isupper()):
+        pass
+      else:
+        erro = True
+      """ elif (estado not in [1, 5, 31, 32] and not (simbolo in ["A", "B", "C", "D", "E", "F"] and estado == 0)):
+        erro = True """
+
     if (simbolo.isdigit()):
       # match/case que representa as transições de estado do autômato ao consumir um dígito
       match(int(estado)):
@@ -64,8 +109,10 @@ def ler_token(cadeia: str):
           estado = 32
         case 32:
           estado = 32
+        case _:
+          erro = True
 
-    elif (simbolo == "."):
+    if (simbolo == "."):
       # Transições de estado ao consumir um ponto
       if(estado == 0):
         estado = 4
@@ -74,36 +121,35 @@ def ler_token(cadeia: str):
       else:
         erro = True
 
-    elif (simbolo == "e"):
-      # Transições de estado ao consumir um 'e'
-      if (estado == 5):
-        estado = 6
-      else:
-        erro = True
+    # Transições de estado ao consumir um 'e'
+    if (simbolo == "e" and estado == 5):
+      estado = 6
 
-    elif (simbolo == "-"):
+    if (simbolo == "-"):
       # Transições de estado ao consumir um '-'
       if (estado == 6):
         estado = 8
       else:
         erro = True
 
-    elif (simbolo in ["A", "B", "C", "D", "E", "F"]):
-      print(estado)
-      if(estado == 0):
+    if (simbolo in ["A", "B", "C", "D", "E", "F"] and estado not in [38, 39, 40]):
+      if (estado == 0):
         estado = 14
       elif (estado == 31 or estado == 32):
         estado = 32
       else:
         erro = True
 
-    elif (simbolo == "x"):
+    if (simbolo == "x"):
       if (estado == 1 or estado == 14):
         estado = 31
+      elif (estado in [0, 38, 39, 54]):
+        pass
       else:
         erro = True
 
-    elif (simbolo == " "):
+    if (simbolo == " "):
+      print(estado, lexema_atual)
       # Se encontrar um espaço, verificar se o estado atual é de aceitação para int ou float
       token = verificar_aceitacao(lin, col, lexema_atual, estado)
       if (token):
@@ -115,8 +161,8 @@ def ler_token(cadeia: str):
       else:
         erro = True
 
-    else:
-      erro = True
+    """ else:
+      erro = True """
 
     # Se ocorrer um erro, imprimir mensagem e reiniciar análise
     if(erro):
@@ -159,7 +205,8 @@ def imprimir_tabela(tabela):
 
 
 def main():
-  cadeia = "123 235.12321e-10 Ax321ABCDEFFFFF213"
+  """ cadeia = '123 235.12321e-10 Ax321ABCDEFFFFF213 "1312" aBcDeFF' """
+  cadeia = '235.12321e-10 Ax321ABCDEFFFFF213 aBcDeF sdadasda'
   tokens = ler_token(cadeia)
   imprimir_tabela(tokens)
 
