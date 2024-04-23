@@ -1,32 +1,25 @@
+from estadosDeAceitação import estados
+
 def verificar_aceitacao(lin, col, lexema_atual, estado):
   token = ()
-  aceitacaoInt = [1, 2, 3, 9]
-  aceitacaoFloat = [5, 7]
-  aceitacaoEnd = [32]
-  aceitacaoCadeia = [35]
-  aceitacaoId = [39, 40]
-  aceitacaoData = [12]
-  aceitacaoComentarioLinha = [80]
-  aceitacaoComentarioBloco = [52]
-  palavrasReservadas = ["rotina", "fim_rotina", "se", "senao", "imprima", "leia", "para", "enquanto"]
 
-  if estado in aceitacaoInt:
+  if estado in estados['TK_INT']:
     token = (lin, col - len(lexema_atual), "TK_INT", lexema_atual)
-  elif estado in aceitacaoFloat:
+  elif estado in estados['TK_FLOAT']:
     token = (lin, col - len(lexema_atual), "TK_FLOAT", lexema_atual)
-  elif estado in aceitacaoEnd:
+  elif estado in estados['TK_END']:
     token = (lin, col - len(lexema_atual), "TK_END", lexema_atual)
-  elif estado in aceitacaoCadeia:
+  elif estado in estados['TK_CADEIA']:
     token = (lin, col - len(lexema_atual), "TK_CADEIA", lexema_atual)
-  elif estado in aceitacaoId:
+  elif estado in estados['TK_ID']:
     token = (lin, col - len(lexema_atual), "TK_ID", lexema_atual)
-  elif estado in aceitacaoData:
+  elif estado in estados['TK_DATA']:
     token = (lin, col - len(lexema_atual), "TK_DATA", lexema_atual)
-  elif estado in aceitacaoComentarioLinha:
+  elif estado in estados['TK_COMENT_LINHA']:
     token = (lin, col - len(lexema_atual), "TK_COMENT_LINHA", lexema_atual)
-  elif estado in aceitacaoComentarioBloco:
+  elif estado in estados['TK_COMENT_BLOCO']:
     token = (lin, col - len(lexema_atual), "TK_COMENT_BLOCO", lexema_atual)
-  elif lexema_atual in palavrasReservadas:
+  elif lexema_atual in estados['palavrasReservadas']:
     token = (lin, col - len(lexema_atual), f"TK_{lexema_atual.upper()}", lexema_atual)
   
   return token
@@ -49,6 +42,7 @@ def ler_token(cadeia: str):
 
   # Variável para controle de erro
   erro = False
+  erros = []
 
   for simbolo in cadeia:
     if (simbolo == '"'):
@@ -57,29 +51,43 @@ def ler_token(cadeia: str):
       elif estado == 34:
         estado = 35
         lexema_atual += simbolo
+        tokens.append((lin, col, lexema_atual, "TK_CADEIA"))
+        estado = 0
+        lexema_atual = ""
+        col += 1
+        continue
+      elif estado == 54:
         token = verificar_aceitacao(lin, col, lexema_atual, estado)
         if (token):
           tokens.append(token)
-          estado = 0
-          lexema_atual = ""
-          col += 1
-          continue  
-        else:
-          erro = True
+        erro = True
+        erros.append((lin, col, f"Erro lin {lin} col {col - len(lexema_atual)}: Palavra reservada não encontrada"))
+        erros.append((lin, col, f"Erro lin {lin} col {col}: Cadeia não fechada"))
+      elif estado in [48, 49, 50]:
+        pass
       else:
         erro = True
+        erros.append((lin, col, f"Erro lin {lin} col {col}: Cadeia não fechada"))
 
     if (simbolo == '\n'):
       if (estado == 34):
-        print(f"ERRO - Cadeia de caracteres não fechada: {lexema_atual} <")
+        erros.append((lin, col, f"Erro lin {lin} col {col}: Cadeia não fechada"))
         erro = True
+        lin += 1
+        col = 1
+      elif (estado in [48, 49, 50]):
+        pass
       else:
-        token = verificar_aceitacao(lin, col, lexema_atual, estado)
-        if (token):
-          tokens.append(token)
-          lexema_atual = ""
-          estado = 0
-
+        if (lexema_atual):
+          token = verificar_aceitacao(lin, col, lexema_atual, estado)
+          if (token):
+            tokens.append(token)
+          else:
+            erros.append((lin, col, f"Erro lin {lin} col {col}: Token inválido"))
+            """ erro = True """
+        
+        lexema_atual = ""
+        estado = 0
         lin += 1
         col = 1
         continue
@@ -117,6 +125,7 @@ def ler_token(cadeia: str):
       elif (estado == 54 and simbolo.islower() or estado == 0 and simbolo.isupper()):
         pass
       else:
+        erros.append((lin, col, f"Erro lin {lin} col {col}: Identificador inválido"))
         erro = True
 
     if (simbolo.isdigit()):
@@ -172,6 +181,9 @@ def ler_token(cadeia: str):
           estado = 12
         case _:
           erro = True
+          if estado in [12, 17, 25]:
+            erros.append((lin, col, f"Erro lin {lin} col {col}: Data mal formatada"))
+          
 
     if (simbolo == "."):
       # Transições de estado ao consumir um ponto
@@ -181,6 +193,7 @@ def ler_token(cadeia: str):
         estado = 5
       else:
         erro = True
+        erros.append((lin, col, f"Erro lin {lin} col {col}: Ponto inválido"))
 
     # Transições de estado ao consumir um 'e'
     if (simbolo == "e" and estado == 5):
@@ -192,11 +205,7 @@ def ler_token(cadeia: str):
       lexema_atual += simbolo
       col += 1
       continue
-      """ if (estado == 6):
-        estado = 8
-      else:
-        erro = True
- """
+
     if (simbolo in ["A", "B", "C", "D", "E", "F"] and estado not in [38, 39, 40]):
       if (estado == 0):
         estado = 14
@@ -204,6 +213,10 @@ def ler_token(cadeia: str):
         estado = 32
       else:
         erro = True
+        erros.append((lin, col, f"Erro lin {lin} col {col}: Hexadecimal inválido"))
+    elif (simbolo.isalpha() and simbolo.isupper() and estado not in [38, 39, 40]):
+      erro = True
+      erros.append((lin, col, f"Erro lin {lin} col {col}: Identificador inválido"))
 
     if (simbolo == "x"):
       if (estado == 1 or estado == 14):
@@ -212,6 +225,7 @@ def ler_token(cadeia: str):
         pass
       else:
         erro = True
+        erros.append((lin, col, f"Erro lin {lin} col {col}: Hexadecimal inválido"))
 
     if (simbolo == '/'):
       if (estado == 2):
@@ -220,6 +234,7 @@ def ler_token(cadeia: str):
         estado = 18
       else:
         erro = True
+        erros.append((lin, col, f"Erro lin {lin} col {col}: Símbolo inválido"))
 
     if (simbolo == '_'):
       if (estado == 2):
@@ -230,6 +245,7 @@ def ler_token(cadeia: str):
         pass
       else:
         erro = True
+        erros.append((lin, col, f"Erro lin {lin} col {col}: Símbolo inválido"))
 
     if (simbolo == '<'):
       if (estado == 0):
@@ -240,9 +256,12 @@ def ler_token(cadeia: str):
         estado = 48
       else:
         erro = True
+        erros.append((lin, col, f"Erro lin {lin} col {col}: Símbolo inválido"))
     
     if (simbolo == '>'):
-      if (estado == 48):
+      if (estado == 0):
+        estado = 71
+      elif (estado == 48):
         estado = 49
       elif (estado == 49):
         estado = 50
@@ -252,8 +271,6 @@ def ler_token(cadeia: str):
         estado = 0
         col += 1
         continue
-      elif (estado == 0):
-        estado = 71
       elif (estado == 63):
         tokens.append((lin, col - len(lexema_atual), "TK_DIFERENTE", lexema_atual + simbolo))
         lexema_atual = ""
@@ -262,6 +279,7 @@ def ler_token(cadeia: str):
         continue
       else:
         erro = True
+        erros.append((lin, col, f"Erro lin {lin} col {col}: Símbolo inválido"))
 
     if (simbolo == '='):
       if (estado == 0):
@@ -288,6 +306,7 @@ def ler_token(cadeia: str):
         continue
       else:
         erro = True
+        erros.append((lin, col, f"Erro lin {lin} col {col}: Símbolo inválido"))
 
     if (simbolo in ['+', '-', '*', '&', '%', '~', '|', ':', '(', ')']):
       if (estado == 0):
@@ -307,6 +326,7 @@ def ler_token(cadeia: str):
           continue
         else:
           erro = True
+          erros.append((lin, col, f"Erro lin {lin} col {col}: Símbolo inválido"))
 
     if (simbolo == '#'):
       if (estado == 0):
@@ -315,6 +335,7 @@ def ler_token(cadeia: str):
         estado = 80
       elif (estado not in [34, 48, 79, 80]):
         erro = True
+        erros.append((lin, col, f"Erro lin {lin} col {col}: Símbolo inválido"))
 
     """ if (simbolo == '\n'):
       token = verificar_aceitacao(lin, col, lexema_atual, estado)
@@ -331,8 +352,10 @@ def ler_token(cadeia: str):
       # Se encontrar um espaço, verificar se o estado atual é de aceitação
       if (estado == 79):
         estado = 80
-      elif (estado == 80):
-        pass
+      elif (estado in [48, 49, 50, 80]):
+        lexema_atual += simbolo
+        col += 1
+        continue
       elif (lexema_atual):
         token = verificar_aceitacao(lin, col, lexema_atual, estado)
         if (token):
@@ -342,6 +365,7 @@ def ler_token(cadeia: str):
           col += 1
           continue
         else:
+          erros.append((lin, col, f"Erro lin {lin} col {col}: Token inválido"))
           erro = True
       else:
         col += 1
@@ -372,8 +396,10 @@ def ler_token(cadeia: str):
       lexema_atual = ""
     else:
       print(f"ERRO - Token não reconhecido: {lexema_atual} <")
+      erros.append((lin, col, f"Erro lin {lin} col {col}: Token inválido"))
 
-  return tokens
+
+  return tokens, erros
 
 
 def imprimir_linha(lin, col, token, lexema):
@@ -394,9 +420,31 @@ def imprimir_tabela(tabela):
 
 def main():
   """ codigo = open("Ex-01-correto.cic", "r") """
-  codigo = open("Ex-02-incorreto.cic", "r")
-  cadeia = codigo.read()
-  tokens = ler_token(cadeia)
+  cadeia = open("Ex-03-incorreto.cic", "r").read()
+  
+  codigo = open("Ex-03-incorreto.cic", "r").readlines()
+  codigo = [linha.strip("\n") for linha in codigo]
+  
+  for index, linha in enumerate(codigo, start=1):
+    codigo[index - 1] = f"[{index}] {linha}"
+
+  """ for linha in codigo:
+    print(linha) """
+
+  tokens, erros = ler_token(cadeia)
   imprimir_tabela(tokens)
+
+  for linha, index in enumerate(codigo, start=1):
+    print(codigo[linha - 1])
+
+    for erro in erros:
+      if (erro[0] == linha):
+        print("   ", end="")
+        for _ in range(erro[1] - 1):
+          print("-", end="")
+        print("^")
+    for erro in erros:
+      if (erro[0] == linha):
+        print(f"   {erro[2]}")
 
 main()
