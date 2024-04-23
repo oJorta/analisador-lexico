@@ -1,4 +1,5 @@
 from estadosDeAceitação import estados
+from erros import listaErros
 
 def verificar_aceitacao(lin, col, lexema_atual, estado):
   token = ()
@@ -21,9 +22,60 @@ def verificar_aceitacao(lin, col, lexema_atual, estado):
     token = (lin, col - len(lexema_atual), "TK_COMENT_BLOCO", lexema_atual)
   elif lexema_atual in estados['palavrasReservadas']:
     token = (lin, col - len(lexema_atual), f"TK_{lexema_atual.upper()}", lexema_atual)
+  elif lexema_atual in estados['operadores']:
+    token = (lin, col - len(lexema_atual), f"TK_{lexema_atual.upper()}", lexema_atual)
+  elif lexema_atual in estados['delimitadores']:
+    token = (lin, col - len(lexema_atual), f"TK_{lexema_atual.upper()}", lexema_atual)
   
   return token
 
+def getPrimeiraTransicao(simbolo):
+    if simbolo.isdigit():
+        return 1
+    elif simbolo == ".":
+        return 4
+    elif simbolo in ["A", "B", "C", "D", "E", "F"]:
+        return 14
+    elif simbolo == '"':
+        return 34
+    elif simbolo.isalpha() and simbolo.islower():
+        return 38
+    elif simbolo == "<":
+        return 63
+    elif simbolo == ">":
+        return 71
+    elif simbolo == "#":
+        return 79
+    elif simbolo == "<":
+        return 63
+    elif simbolo == ">":
+        return 71
+    elif simbolo == "+":
+        return 56
+    elif simbolo == "*":
+        return 57
+    elif simbolo == "-":
+        return 58
+    elif simbolo == "&":
+        return 59
+    elif simbolo == "%":
+        return 60
+    elif simbolo == "~":
+        return 61
+    elif simbolo == "|":
+        return 62
+    elif simbolo == ":":
+        return 84
+    elif simbolo == "(":
+        return 86
+    elif simbolo == ")":
+        return 88
+    elif simbolo in [" ", "\t"]:
+        return 0
+    elif simbolo == "\n":
+        return 0
+    else:
+        return -1
 
 def ler_token(cadeia: str):
   """
@@ -41,365 +93,425 @@ def ler_token(cadeia: str):
   tokens = []
 
   # Variável para controle de erro
+  semTransicao = False
   erro = False
   erros = []
+  somatorio = {}
 
   for simbolo in cadeia:
-    if (simbolo == '"'):
-      if estado == 0:
-        estado = 34
-      elif estado == 34:
-        estado = 35
-        lexema_atual += simbolo
-        tokens.append((lin, col, lexema_atual, "TK_CADEIA"))
-        estado = 0
-        lexema_atual = ""
-        col += 1
-        continue
-      elif estado == 54:
-        token = verificar_aceitacao(lin, col, lexema_atual, estado)
-        if (token):
-          tokens.append(token)
-        erro = True
-        erros.append((lin, col, f"Erro lin {lin} col {col - len(lexema_atual)}: Palavra reservada não encontrada"))
-        erros.append((lin, col, f"Erro lin {lin} col {col}: Cadeia não fechada"))
-      elif estado in [48, 49, 50]:
-        pass
-      else:
-        erro = True
-        erros.append((lin, col, f"Erro lin {lin} col {col}: Cadeia não fechada"))
-
-    if (simbolo == '\n'):
-      if (estado == 34):
-        erros.append((lin, col, f"Erro lin {lin} col {col}: Cadeia não fechada"))
-        erro = True
-        lin += 1
-        col = 1
-      elif (estado in [48, 49, 50]):
-        pass
-      else:
-        if (lexema_atual):
-          token = verificar_aceitacao(lin, col, lexema_atual, estado)
-          if (token):
-            tokens.append(token)
-          else:
-            erros.append((lin, col, f"Erro lin {lin} col {col}: Token inválido"))
-            """ erro = True """
-        
-        lexema_atual = ""
-        estado = 0
-        lin += 1
-        col = 1
-        continue
-
-    if (estado == 34 and simbolo != '\n'):
-      lexema_atual += simbolo
-      col += 1
-      continue
-    
-    if (estado == 79):
-      estado = 80
-    
-    if (estado == 80):
-      lexema_atual += simbolo
-      col += 1
-      continue
-
-    if (estado in [48, 49, 50] and simbolo != '>'):
-      estado = 48
-      lexema_atual += simbolo
-      col += 1
-      continue
-
-    if (simbolo.isalpha() and estado not in [1, 5, 14, 31, 32]):
-      if(estado == 0 and simbolo.islower()):
-        estado = 38
-      elif (estado == 38 and simbolo.isupper()):
-        estado = 39
-      elif (estado == 38 and simbolo.islower()):
-        estado = 54
-      elif (estado == 39 and simbolo.islower()):
-        estado = 40
-      elif (estado == 40 and simbolo.isupper()):
-        estado = 39
-      elif (estado == 54 and simbolo.islower() or estado == 0 and simbolo.isupper()):
-        pass
-      else:
-        erros.append((lin, col, f"Erro lin {lin} col {col}: Identificador inválido"))
-        erro = True
-
-    if (simbolo.isdigit()):
-      # match/case que representa as transições de estado do autômato ao consumir um dígito
-      match(int(estado)):
+    match (estado):
         case 0:
-          estado = 1
+            if simbolo.isdigit():
+                estado = 1
+            elif simbolo == ".":
+                estado = 4
+            elif simbolo in ["A", "B", "C", "D", "E", "F"]:
+                estado = 14
+            elif simbolo == '"':
+                estado = 34
+            elif simbolo.isalpha() and simbolo.islower():
+                estado = 38
+            elif simbolo == "<":
+                estado = 63
+            elif simbolo == ">":
+                estado = 71
+            elif simbolo == "+":
+                estado = 56
+            elif simbolo == "*":
+                estado = 57
+            elif simbolo == "-":
+                estado = 58
+            elif simbolo == "&":
+                estado = 59
+            elif simbolo == "%":
+                estado = 60
+            elif simbolo == "~":
+                estado = 61
+            elif simbolo == "|":
+                estado = 62
+            elif simbolo == ":":
+                estado = 84
+            elif simbolo == "(":
+                estado = 86
+            elif simbolo == ")":
+                estado = 88
+            elif simbolo in ["+", "-", "*", "|", "&", "%", "~", ":", "(", ")"]:
+                tokens.append((lin, col, f"TK_{simbolo.upper()}", simbolo))
+                col += 1
+                continue
+            elif simbolo == "#":
+                estado = 79
+            elif simbolo in [" ", "\t"]:
+                col += 1
+                continue
+            elif simbolo == "\n":
+                lin += 1
+                col = 1
+                continue
+            else:
+                semTransicao = True
         case 1:
-          estado = 2
+            if simbolo.isdigit():
+                estado = 2
+            elif simbolo == ".":
+                estado = 5
+            elif simbolo == "x":
+                estado = 31
+            else:
+                semTransicao = True
         case 2:
-          estado = 3
+            if simbolo.isdigit():
+                estado = 3
+            elif simbolo == ".":
+                estado = 5
+            elif simbolo == "/":
+                estado = 15
+            elif simbolo == "_":
+                estado = 23
+            else:
+                semTransicao = True
         case 3:
-          estado = 9
-        case 9:
-          estado = 9
+            if simbolo.isdigit():
+                estado = 9
+            elif simbolo == ".":
+                estado = 5
+            else:
+                semTransicao = True
         case 4:
-          estado = 5
+            if simbolo.isdigit():
+                estado = 5
+            else:
+                semTransicao = True
         case 5:
-          estado = 5
+            if simbolo.isdigit():
+                estado = 5
+            elif simbolo == "e":
+                estado = 6
+            else:
+                semTransicao = True
         case 6:
-          estado = 7
+            if simbolo.isdigit():
+                estado = 7
+            elif simbolo == "-":
+                estado = 8
+            else:
+                semTransicao = True
         case 7:
-          estado = 7
+            if simbolo.isdigit():
+                estado = 7
+            else:
+                semTransicao = True
         case 8:
-          estado = 7
-        case 31:
-          estado = 32
-        case 32:
-          estado = 32
+            if simbolo.isdigit():
+                estado = 7
+            else:
+                semTransicao = True
+        case 9:
+            if simbolo.isdigit():
+                estado = 9
+            else:
+                semTransicao = True
+        case 12:
+            semTransicao = True
+        case 14:
+            if simbolo == "x":
+                estado = 31
+            else:
+                semTransicao = True
         case 15:
-          estado = 16
+            if simbolo.isdigit():
+                estado = 16
+            else:
+                semTransicao = True
         case 16:
-          estado = 17
+            if simbolo.isdigit():
+                estado = 17
+            else:
+                semTransicao = True
+        case 17:
+            if simbolo == "/":
+                estado = 18
+            else:
+                semTransicao = True
         case 18:
-          estado = 19
+            if simbolo.isdigit():
+                estado = 19
+            else:
+                semTransicao = True
         case 19:
-          estado = 20
+            if simbolo.isdigit():
+                estado = 20
+            else:
+                semTransicao = True
         case 20:
-          estado = 21
+            if simbolo.isdigit():
+                estado = 21
+            else:
+                semTransicao = True
         case 21:
-          estado = 12
+            if simbolo.isdigit():
+                estado = 12
+            else:
+                semTransicao = True
         case 23:
-          estado = 24
+            if simbolo.isdigit():
+                estado = 24
+            else:
+                semTransicao = True
         case 24:
-          estado = 25
+            if simbolo.isdigit():
+                estado = 25
+            else:
+                semTransicao = True
+        case 25:
+            if simbolo == "_":
+                estado = 26
+            else:
+                semTransicao = True
         case 26:
-          estado = 27
+            if simbolo.isdigit():
+                estado = 27
+            else:
+                semTransicao = True
         case 27:
-          estado = 28
+            if simbolo.isdigit():
+                estado = 28
+            else:
+                semTransicao = True
         case 28:
-          estado = 29
+            if simbolo.isdigit():
+                estado = 29
+            else:
+                semTransicao = True
         case 29:
-          estado = 12
+            if simbolo.isdigit():
+                estado = 12
+            else:
+                semTransicao = True
+        case 31:
+            if simbolo.isdigit() or simbolo in ["A", "B", "C", "D", "E", "F"]:
+                estado = 32
+            else:
+                semTransicao = True
+        case 32:
+            if simbolo.isdigit() or simbolo in ["A", "B", "C", "D", "E", "F"]:
+                estado = 32
+            else:
+                semTransicao = True
+        case 34:
+            if simbolo == '"':
+                estado = 35
+            elif simbolo == "\n":
+                semTransicao = True
+            else:
+                estado = 34
+        case 35:
+            semTransicao = True
+        case 38:
+            if simbolo.isalpha() and simbolo.isupper():
+                estado = 39
+            elif simbolo.isalpha() and simbolo.islower():
+                estado = 54
+            else:
+                semTransicao = True
+        case 39:
+            if simbolo.isalpha() and simbolo.islower():
+                estado = 40
+            else:
+                semTransicao = True
+        case 40:
+            if simbolo.isalpha() and simbolo.isupper():
+                estado = 39
+            else:
+                semTransicao = True
+        case 48:
+            if simbolo != ">":
+                estado = 48
+            elif simbolo == ">":
+                estado = 49
+        case 49:
+            if simbolo != ">":
+                estado = 48
+            elif simbolo == ">":
+                estado = 50
+        case 50:
+            if simbolo != ">":
+                estado = 48
+            elif simbolo == ">":
+                estado = 52
+        case 51:
+            if simbolo == "<":
+                estado = 48
+            else:
+                semTransicao = True
+        case 52:
+            semTransicao = True
+        case 54:
+            if simbolo.isalpha() and simbolo.islower() or simbolo == "_":
+                estado = 54
+            else:
+                semTransicao = True
+        case 56:
+            semTransicao = True
+        case 57:
+            semTransicao = True
+        case 58:
+            semTransicao = True
+        case 59:
+            semTransicao = True
+        case 60:
+            semTransicao = True
+        case 61:
+            semTransicao = True
+        case 62:
+            semTransicao = True
+        case 63:
+            if simbolo == "<":
+                estado = 51
+            elif simbolo == ">":
+                estado = 64
+            elif simbolo == "=":
+                estado = 65
+            else:
+                semTransicao = True
+        case 64:
+            semTransicao = True
+        case 65:
+            if simbolo == "=":
+                estado = 66
+            else:
+                semTransicao = True
+        case 66:
+            semTransicao = True
+        case 71:
+            if simbolo == "=":
+                estado = 72
+            else:
+                semTransicao = True
+        case 72:
+            semTransicao = True
+        case 79:
+            if simbolo != "\n":
+                estado = 80
+            else:
+               semTransicao = True
+        case 80:
+            if simbolo != "\n":
+                pass
+            else:
+                semTransicao = True
+        case 84:
+            semTransicao = True
+        case 86:
+            semTransicao = True
+        case 88:
+            semTransicao = True
         case _:
-          erro = True
-          if estado in [12, 17, 25]:
-            erros.append((lin, col, f"Erro lin {lin} col {col}: Data mal formatada"))
-          
+            erro = True
 
-    if (simbolo == "."):
-      # Transições de estado ao consumir um ponto
-      if(estado == 0):
-        estado = 4
-      elif (estado == 1 or estado == 2 or estado == 3):
-        estado = 5
-      else:
-        erro = True
-        erros.append((lin, col, f"Erro lin {lin} col {col}: Ponto inválido"))
-
-    # Transições de estado ao consumir um 'e'
-    if (simbolo == "e" and estado == 5):
-      estado = 6
-
-    # Transições de estado ao consumir um '-'
-    if (simbolo == "-" and estado == 6):
-      estado = 8
-      lexema_atual += simbolo
-      col += 1
-      continue
-
-    if (simbolo in ["A", "B", "C", "D", "E", "F"] and estado not in [38, 39, 40]):
-      if (estado == 0):
-        estado = 14
-      elif (estado == 31 or estado == 32):
-        estado = 32
-      else:
-        erro = True
-        erros.append((lin, col, f"Erro lin {lin} col {col}: Hexadecimal inválido"))
-    elif (simbolo.isalpha() and simbolo.isupper() and estado not in [38, 39, 40]):
-      erro = True
-      erros.append((lin, col, f"Erro lin {lin} col {col}: Identificador inválido"))
-
-    if (simbolo == "x"):
-      if (estado == 1 or estado == 14):
-        estado = 31
-      elif (estado in [0, 38, 39, 54]):
-        pass
-      else:
-        erro = True
-        erros.append((lin, col, f"Erro lin {lin} col {col}: Hexadecimal inválido"))
-
-    if (simbolo == '/'):
-      if (estado == 2):
-        estado = 15
-      elif (estado == 17):
-        estado = 18
-      else:
-        erro = True
-        erros.append((lin, col, f"Erro lin {lin} col {col}: Símbolo inválido"))
-
-    if (simbolo == '_'):
-      if (estado == 2):
-        estado = 23
-      elif (estado == 25):
-        estado = 26
-      elif (estado == 54):
-        pass
-      else:
-        erro = True
-        erros.append((lin, col, f"Erro lin {lin} col {col}: Símbolo inválido"))
-
-    if (simbolo == '<'):
-      if (estado == 0):
-        estado = 63
-      elif (estado == 63):
-        estado = 51
-      elif (estado == 51):
-        estado = 48
-      else:
-        erro = True
-        erros.append((lin, col, f"Erro lin {lin} col {col}: Símbolo inválido"))
-    
-    if (simbolo == '>'):
-      if (estado == 0):
-        estado = 71
-      elif (estado == 48):
-        estado = 49
-      elif (estado == 49):
-        estado = 50
-      elif (estado == 50):
-        tokens.append((lin, col - len(lexema_atual), "TK_COMENT", lexema_atual + simbolo))
-        lexema_atual = ""
-        estado = 0
-        col += 1
-        continue
-      elif (estado == 63):
-        tokens.append((lin, col - len(lexema_atual), "TK_DIFERENTE", lexema_atual + simbolo))
-        lexema_atual = ""
-        estado = 0
-        col += 1
-        continue
-      else:
-        erro = True
-        erros.append((lin, col, f"Erro lin {lin} col {col}: Símbolo inválido"))
-
-    if (simbolo == '='):
-      if (estado == 0):
-        estado = 75
-      elif (estado == 75):
-        tokens.append((lin, col - len(lexema_atual), "TK_IGUAL_A", lexema_atual + simbolo))
-        lexema_atual = ""
-        estado = 0
-        col += 1
-        continue
-      elif (estado == 71):
-        tokens.append((lin, col - len(lexema_atual), "TK_MAIOR_IGUAL", lexema_atual + simbolo))
-        lexema_atual = ""
-        estado = 0
-        col += 1
-        continue
-      elif (estado == 63):
-        estado = 65
-      elif (estado == 65):
-        tokens.append((lin, col - len(lexema_atual), "TK_ATRIBUICAO", lexema_atual + simbolo))
-        lexema_atual = ""
-        estado = 0
-        col += 1
-        continue
-      else:
-        erro = True
-        erros.append((lin, col, f"Erro lin {lin} col {col}: Símbolo inválido"))
-
-    if (simbolo in ['+', '-', '*', '&', '%', '~', '|', ':', '(', ')']):
-      if (estado == 0):
-        tokens.append((lin, col - len(lexema_atual), f"TK_{simbolo}", lexema_atual + simbolo))
-        lexema_atual = ""
-        estado = 0
-        col += 1
-        continue
-      else:
-        token = verificar_aceitacao(lin, col, lexema_atual, estado)
-        if (token):
-          tokens.append(token)
-          lexema_atual = ""
-          estado = 0
-          col += 1
-          tokens.append((lin, col, f"TK_{simbolo}", simbolo))
-          continue
+    if (semTransicao):
+        print(estado, lexema_atual, simbolo, "dsa")
+        print(lexema_atual == " ")
+        if (lexema_atual not in ["", " ", "\n"]):
+            token = verificar_aceitacao(lin, col, lexema_atual, estado)
+            if (token):
+                tokens.append(token)
+                if token[2] in somatorio:
+                    somatorio[token[2]] += 1
+                else:
+                    somatorio[token[2]] = 1
+                lexema_atual = ""
+                estado = 0
+                semTransicao = False
+                if simbolo == " ":
+                    col += 1
+                    continue
+                elif simbolo == "\n":
+                    lin += 1
+                    col = 1
+                    continue
+                estado = getPrimeiraTransicao(simbolo)
+            else:
+                erro = True
+                semTransicao = False
         else:
-          erro = True
-          erros.append((lin, col, f"Erro lin {lin} col {col}: Símbolo inválido"))
+            if simbolo in [" ", "\t"]:
+                lexema_atual = ""
+                col += 1
+                continue
+            elif simbolo == "\n":
+                lexema_atual = ""
+                lin += 1
+                col = 1
+                continue
 
-    if (simbolo == '#'):
-      if (estado == 0):
-        estado = 79
-      elif (estado == 79):
-        estado = 80
-      elif (estado not in [34, 48, 79, 80]):
-        erro = True
-        erros.append((lin, col, f"Erro lin {lin} col {col}: Símbolo inválido"))
-
-    """ if (simbolo == '\n'):
-      token = verificar_aceitacao(lin, col, lexema_atual, estado)
-      if (token):
-        tokens.append(token)
-        lexema_atual = ""
-        estado = 0
-
-      lin += 1
-      col = 1
-      continue """
-
-    if (simbolo == " " or simbolo == "\t"):
-      # Se encontrar um espaço, verificar se o estado atual é de aceitação
-      if (estado == 79):
-        estado = 80
-      elif (estado in [48, 49, 50, 80]):
-        lexema_atual += simbolo
-        col += 1
-        continue
-      elif (lexema_atual):
-        token = verificar_aceitacao(lin, col, lexema_atual, estado)
-        if (token):
-          tokens.append(token)
-          lexema_atual = ""
-          estado = 0
-          col += 1
-          continue
-        else:
-          erros.append((lin, col, f"Erro lin {lin} col {col}: Token inválido"))
-          erro = True
-      else:
-        col += 1
-        continue
-    
-    
-    """ else:
-      erro = True """
+            estado = getPrimeiraTransicao(simbolo)
+            if (estado == -1):
+                erros.append((lin, col, f"Erro lin {lin} col {col}: simbolo não reconhecido"))
+                estado = 0
+                lexema_atual = ""
+                semTransicao = False
+                col += 1
+                continue
+            else:
+                semTransicao = False
 
     # Se ocorrer um erro, imprimir mensagem e reiniciar análise
     if(erro):
       print(f"ERRO - Simbolo não reconhecido: {lexema_atual}{simbolo} <")
-      lexema_atual = ""
+      erros.append((lin, col, f"Erro lin {lin} col {col}: {listaErros[estado]}"))
+
       estado = 0
-      col += 1
+
+      if (simbolo == " "):
+        col += 1
+        lexema_atual = ""
+        erro = False
+        continue
+      elif (simbolo == "\n"):
+        lin += 1
+        col = 1
+        lexema_atual = ""
+        erro = False
+        continue
+      else:
+        col += 1
+        
+      estado = getPrimeiraTransicao(simbolo)
+      if (estado == -1):
+        erros.append((lin, col, f"Erro lin {lin} col {col}: simbolo não reconhecido"))
+        estado = 0
+        lexema_atual = ""
+      else:
+        lexema_atual = simbolo  
       erro = False
       continue
 
     # Adicionar o símbolo atual ao lexema e incrementar a coluna
     lexema_atual += simbolo
-    col += 1
+    if (simbolo == "\n"):
+      lin += 1
+      col = 1
+    else:
+      col += 1
+
 
   # Verificar se o estado final é de aceitação
   if (lexema_atual):
     token = verificar_aceitacao(lin, col, lexema_atual, estado)
     if (token):
       tokens.append(token)
+      if token[2] in somatorio:
+        somatorio[token[2]] += 1
+      else:
+        somatorio[token[2]] = 1
       lexema_atual = ""
     else:
       print(f"ERRO - Token não reconhecido: {lexema_atual} <")
       erros.append((lin, col, f"Erro lin {lin} col {col}: Token inválido"))
 
 
-  return tokens, erros
+  return tokens, erros, somatorio
 
 
 def imprimir_linha(lin, col, token, lexema):
@@ -416,23 +528,29 @@ def imprimir_tabela(tabela):
   for (lin, col, token, lexema) in tabela:
     imprimir_linha(lin, col, token, lexema)
   print("+------+-----+------------------+---------------------------+")
+  
+def imprimir_somatorio(dados):
+  # Função para imprimir a tabela de somatório
+  print("+------------------+------+")
+  print("| TOKEN            | USOS |")
+  print("+------------------+------+")
+  for (token, usos) in dados.items():
+    print("| {:<16} | {:>4} |".format(token, usos))
+  print("+------------------+------+")
 
 
 def main():
-  """ codigo = open("Ex-01-correto.cic", "r") """
-  cadeia = open("Ex-03-incorreto.cic", "r").read()
+  cadeia = open("Ex-02-incorreto.cic", "r").read()
   
-  codigo = open("Ex-03-incorreto.cic", "r").readlines()
+  codigo = open("Ex-02-incorreto.cic", "r").readlines()
   codigo = [linha.strip("\n") for linha in codigo]
   
   for index, linha in enumerate(codigo, start=1):
     codigo[index - 1] = f"[{index}] {linha}"
 
-  """ for linha in codigo:
-    print(linha) """
-
-  tokens, erros = ler_token(cadeia)
+  tokens, erros, somatorio = ler_token(cadeia)
   imprimir_tabela(tokens)
+  imprimir_somatorio(somatorio)
 
   for linha, index in enumerate(codigo, start=1):
     print(codigo[linha - 1])

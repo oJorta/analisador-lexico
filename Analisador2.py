@@ -211,6 +211,8 @@ def ler_token(cadeia: str):
                 estado = 9
             else:
                 semTransicao = True
+        case 12:
+            semTransicao = True
         case 14:
             if simbolo == "x":
                 estado = 31
@@ -300,9 +302,11 @@ def ler_token(cadeia: str):
             if simbolo == '"':
                 estado = 35
             elif simbolo == "\n":
-                erro = True
+                semTransicao = True
             else:
                 estado = 34
+        case 35:
+            semTransicao = True
         case 38:
             if simbolo.isalpha() and simbolo.isupper():
                 estado = 39
@@ -320,6 +324,11 @@ def ler_token(cadeia: str):
                 estado = 39
             else:
                 semTransicao = True
+        case 48:
+            if simbolo != ">":
+                estado = 48
+            elif simbolo == ">":
+                estado = 49
         case 49:
             if simbolo != ">":
                 estado = 48
@@ -331,10 +340,10 @@ def ler_token(cadeia: str):
             elif simbolo == ">":
                 estado = 52
         case 51:
-            if simbolo != ">":
-                estado = 51
-            elif simbolo == ">":
-                estado = 49
+            if simbolo == "<":
+                estado = 48
+            else:
+                semTransicao = True
         case 52:
             semTransicao = True
         case 54:
@@ -398,10 +407,12 @@ def ler_token(cadeia: str):
         case 88:
             semTransicao = True
         case _:
-            semTransicao = True
+            erro = True
 
     if (semTransicao):
-        if (lexema_atual not in [" ", "\n"]):
+        print(estado, lexema_atual, simbolo, "dsa")
+        print(lexema_atual == " ")
+        if (lexema_atual not in ["", " ", "\n"]):
             token = verificar_aceitacao(lin, col, lexema_atual, estado)
             if (token):
                 tokens.append(token)
@@ -410,13 +421,12 @@ def ler_token(cadeia: str):
                 else:
                     somatorio[token[2]] = 1
                 lexema_atual = ""
+                estado = 0
                 semTransicao = False
                 if simbolo == " ":
-                    estado = 0
                     col += 1
                     continue
                 elif simbolo == "\n":
-                    estado = 0
                     lin += 1
                     col = 1
                     continue
@@ -425,24 +435,66 @@ def ler_token(cadeia: str):
                 erro = True
                 semTransicao = False
         else:
-            estado = 0
-            lexema_atual = ""
-            semTransicao = False
-       
+            if simbolo in [" ", "\t"]:
+                lexema_atual = ""
+                col += 1
+                continue
+            elif simbolo == "\n":
+                lexema_atual = ""
+                lin += 1
+                col = 1
+                continue
+
+            estado = getPrimeiraTransicao(simbolo)
+            if (estado == -1):
+                erros.append((lin, col, f"Erro lin {lin} col {col}: simbolo não reconhecido"))
+                estado = 0
+                lexema_atual = ""
+                semTransicao = False
+                col += 1
+                continue
+            else:
+                semTransicao = False
 
     # Se ocorrer um erro, imprimir mensagem e reiniciar análise
     if(erro):
       print(f"ERRO - Simbolo não reconhecido: {lexema_atual}{simbolo} <")
       erros.append((lin, col, f"Erro lin {lin} col {col}: {listaErros[estado]}"))
+
       estado = 0
-      lexema_atual = simbolo
-      col += 1
+
+      if (simbolo == " "):
+        col += 1
+        lexema_atual = ""
+        erro = False
+        continue
+      elif (simbolo == "\n"):
+        lin += 1
+        col = 1
+        lexema_atual = ""
+        erro = False
+        continue
+      else:
+        col += 1
+        
+      estado = getPrimeiraTransicao(simbolo)
+      if (estado == -1):
+        erros.append((lin, col, f"Erro lin {lin} col {col}: simbolo não reconhecido"))
+        estado = 0
+        lexema_atual = ""
+      else:
+        lexema_atual = simbolo  
       erro = False
       continue
 
     # Adicionar o símbolo atual ao lexema e incrementar a coluna
     lexema_atual += simbolo
-    col += 1
+    if (simbolo == "\n"):
+      lin += 1
+      col = 1
+    else:
+      col += 1
+
 
   # Verificar se o estado final é de aceitação
   if (lexema_atual):
@@ -488,9 +540,9 @@ def imprimir_somatorio(dados):
 
 
 def main():
-  cadeia = open("Ex-01-correto.cic", "r").read()
+  cadeia = open("Ex-03-incorreto.cic", "r").read()
   
-  codigo = open("Ex-01-correto.cic", "r").readlines()
+  codigo = open("Ex-03-incorreto.cic", "r").readlines()
   codigo = [linha.strip("\n") for linha in codigo]
   
   for index, linha in enumerate(codigo, start=1):
