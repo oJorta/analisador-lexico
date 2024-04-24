@@ -60,7 +60,6 @@ listaErros = {
     72: "operador não encontrado",
     74: "operador não encontrado",
     79: "comentário de linha mal formatado",
-    80: "comentário de linha mal formatado",
     81: "comentário de linha mal formatado",
     84: "delimitador não encontrado",
     86: "delimitador não encontrado",

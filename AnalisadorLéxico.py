@@ -2,32 +2,34 @@ from estadosDeAceitação import estados
 from erros import listaErros
 
 def verificar_aceitacao(lin, col, lexema_atual, estado):
-  token = ()
-
   if estado in estados['TK_INT']:
-    token = (lin, col - len(lexema_atual), "TK_INT", lexema_atual)
+    return (lin, col - len(lexema_atual), "TK_INT", lexema_atual)
   elif estado in estados['TK_FLOAT']:
-    token = (lin, col - len(lexema_atual), "TK_FLOAT", lexema_atual)
+    return (lin, col - len(lexema_atual), "TK_FLOAT", lexema_atual)
   elif estado in estados['TK_END']:
-    token = (lin, col - len(lexema_atual), "TK_END", lexema_atual)
+    return (lin, col - len(lexema_atual), "TK_END", lexema_atual)
   elif estado in estados['TK_CADEIA']:
-    token = (lin, col - len(lexema_atual), "TK_CADEIA", lexema_atual)
+    return (lin, col - len(lexema_atual), "TK_CADEIA", lexema_atual)
   elif estado in estados['TK_ID']:
-    token = (lin, col - len(lexema_atual), "TK_ID", lexema_atual)
+    return (lin, col - len(lexema_atual), "TK_ID", lexema_atual)
   elif estado in estados['TK_DATA']:
-    token = (lin, col - len(lexema_atual), "TK_DATA", lexema_atual)
+    return (lin, col - len(lexema_atual), "TK_DATA", lexema_atual)
   elif estado in estados['TK_COMENT_LINHA']:
-    token = (lin, col - len(lexema_atual), "TK_COMENT_LINHA", lexema_atual)
+    return (lin, col - len(lexema_atual), "TK_COMENT_LINHA", lexema_atual)
   elif estado in estados['TK_COMENT_BLOCO']:
-    token = (lin, col - len(lexema_atual), "TK_COMENT_BLOCO", lexema_atual)
+    return (lin, col - len(lexema_atual), "TK_COMENT_BLOCO", lexema_atual)
   elif lexema_atual in estados['palavrasReservadas']:
-    token = (lin, col - len(lexema_atual), f"TK_{lexema_atual.upper()}", lexema_atual)
-  elif lexema_atual in estados['operadores']:
-    token = (lin, col - len(lexema_atual), f"TK_{lexema_atual.upper()}", lexema_atual)
-  elif lexema_atual in estados['delimitadores']:
-    token = (lin, col - len(lexema_atual), f"TK_{lexema_atual.upper()}", lexema_atual)
+    return (lin, col - len(lexema_atual), f"TK_{lexema_atual.upper()}", '')
+  else:
+    for operador, nome_operador in estados['operadores']:
+        if lexema_atual == operador:
+            return (lin, col - len(lexema_atual), f"TK_{nome_operador.upper()}", '')
+
+    for delimitador, nome_delimitador in estados['delimitadores']:
+        if lexema_atual == delimitador:
+            return (lin, col - len(lexema_atual), f"TK_{nome_delimitador.upper()}", '')
   
-  return token
+  return ()
 
 def getPrimeiraTransicao(simbolo):
     if simbolo.isdigit():
@@ -77,7 +79,7 @@ def getPrimeiraTransicao(simbolo):
     else:
         return -1
 
-def ler_token(cadeia: str):
+def ler_token(codigo: str):
   """
   Essa é a função responsável por receber a cadeia de caracteres e retornar uma lista de tokens.
   O retorno da função é uma tabela de tokens, onde cada token é representado como uma tupla contendo a linha, a coluna, o tipo e o lexema do token.
@@ -86,19 +88,21 @@ def ler_token(cadeia: str):
   # Estado inicial do autômato
   estado = 0
 
-  # Inicialização de variáveis que serão utilizadas para construir a lista de tokens
+  # Variáveis que serão utilizadas para construir a lista de tokens
   lin = 1
   col = 1
   lexema_atual = ""
   tokens = []
 
-  # Variável para controle de erro
+  # Variáveis de controle
   semTransicao = False
   erro = False
+
+  # Variáveis para armazenar os erros e o somatório de tokens
   erros = []
   somatorio = {}
 
-  for simbolo in cadeia:
+  for simbolo in codigo:
     match (estado):
         case 0:
             if simbolo.isdigit():
@@ -392,14 +396,9 @@ def ler_token(cadeia: str):
             semTransicao = True
         case 79:
             if simbolo != "\n":
-                estado = 80
+                estado = 79
             else:
                semTransicao = True
-        case 80:
-            if simbolo != "\n":
-                pass
-            else:
-                semTransicao = True
         case 84:
             semTransicao = True
         case 86:
@@ -410,8 +409,6 @@ def ler_token(cadeia: str):
             erro = True
 
     if (semTransicao):
-        print(estado, lexema_atual, simbolo, "dsa")
-        print(lexema_atual == " ")
         if (lexema_atual not in ["", " ", "\n"]):
             token = verificar_aceitacao(lin, col, lexema_atual, estado)
             if (token):
@@ -458,7 +455,6 @@ def ler_token(cadeia: str):
 
     # Se ocorrer um erro, imprimir mensagem e reiniciar análise
     if(erro):
-      print(f"ERRO - Simbolo não reconhecido: {lexema_atual}{simbolo} <")
       erros.append((lin, col, f"Erro lin {lin} col {col}: {listaErros[estado]}"))
 
       estado = 0
@@ -507,18 +503,10 @@ def ler_token(cadeia: str):
         somatorio[token[2]] = 1
       lexema_atual = ""
     else:
-      print(f"ERRO - Token não reconhecido: {lexema_atual} <")
       erros.append((lin, col, f"Erro lin {lin} col {col}: Token inválido"))
 
 
   return tokens, erros, somatorio
-
-
-def imprimir_linha(lin, col, token, lexema):
-  # Função para imprimir uma linha da tabela de tokens
-  # Utiliza formatação para alinhar os valores (exemplo: {:<4} alinha o valor à esquerda em 4 espaços)
-  print("| {:<4} | {:<4} | {:<15} | {:<25} |".format(lin, col, token, lexema))
-
 
 def imprimir_tabela(tabela):
   # Função para imprimir a tabela de tokens
@@ -526,11 +514,13 @@ def imprimir_tabela(tabela):
   print("| LIN  | COL | TOKEN            | LEXEMA                    |")
   print("+------+-----+------------------+---------------------------+")
   for (lin, col, token, lexema) in tabela:
-    imprimir_linha(lin, col, token, lexema)
+    print("| {:<4} | {:<4} | {:<15} | {:<25} |".format(lin, col, token, lexema))
   print("+------+-----+------------------+---------------------------+")
   
 def imprimir_somatorio(dados):
   # Função para imprimir a tabela de somatório
+  dados = dict(sorted(dados.items(), key=lambda item: item[1], reverse=True))
+
   print("+------------------+------+")
   print("| TOKEN            | USOS |")
   print("+------------------+------+")
@@ -538,31 +528,37 @@ def imprimir_somatorio(dados):
     print("| {:<16} | {:>4} |".format(token, usos))
   print("+------------------+------+")
 
+def imprimir_codigo(arquivo, erros):
+    codigo = open(arquivo, "r").readlines()
+    codigo = [linha.strip("\n") for linha in codigo]
+    
+    for index, linha in enumerate(codigo, start=1):
+        codigo[index - 1] = f"[{index}] {linha}"
+    
+    for linha, index in enumerate(codigo, start=1):
+        print(codigo[linha - 1])
+
+        for erro in erros:
+            if (erro[0] == linha):
+                print("   ", end="")
+                for _ in range(erro[1] - 1):
+                    print("-", end="")
+                print("^")
+        for erro in erros:
+            if (erro[0] == linha):
+                print(f"   {erro[2]}")
+
 
 def main():
-  cadeia = open("Ex-02-incorreto.cic", "r").read()
-  
-  codigo = open("Ex-02-incorreto.cic", "r").readlines()
-  codigo = [linha.strip("\n") for linha in codigo]
-  
-  for index, linha in enumerate(codigo, start=1):
-    codigo[index - 1] = f"[{index}] {linha}"
+  arquivo = "Ex-01-correto.cic"
 
-  tokens, erros, somatorio = ler_token(cadeia)
+  codigo = open(arquivo, "r").read()
+
+  tokens, erros, somatorio = ler_token(codigo)
+
+  imprimir_codigo(arquivo, erros)
   imprimir_tabela(tokens)
   imprimir_somatorio(somatorio)
 
-  for linha, index in enumerate(codigo, start=1):
-    print(codigo[linha - 1])
-
-    for erro in erros:
-      if (erro[0] == linha):
-        print("   ", end="")
-        for _ in range(erro[1] - 1):
-          print("-", end="")
-        print("^")
-    for erro in erros:
-      if (erro[0] == linha):
-        print(f"   {erro[2]}")
 
 main()
