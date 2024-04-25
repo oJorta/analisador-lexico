@@ -1,7 +1,9 @@
-from estadosDeAceitação import estados
-from erros import listaErros
+from estadosDeAceitação import estados # lista de estados de aceitação
+from erros import listaErros # lista de erros
 
 def verificar_aceitacao(lin, col, lexema_atual, estado):
+  # Verifica se o estado atual é de aceitação e retorna o token correspondente
+
   if estado in estados['TK_INT']:
     return (lin, col - len(lexema_atual), "TK_INT", lexema_atual)
   elif estado in estados['TK_FLOAT']:
@@ -17,10 +19,14 @@ def verificar_aceitacao(lin, col, lexema_atual, estado):
   elif estado in estados['TK_COMENT_LINHA']:
     return (lin, col - len(lexema_atual), "TK_COMENT_LINHA", lexema_atual)
   elif estado in estados['TK_COMENT_BLOCO']:
-    return (lin, col - len(lexema_atual), "TK_COMENT_BLOCO", lexema_atual)
+    for simbolo in lexema_atual:
+      if simbolo == "\n":
+        lin -= 1
+    return (lin, 1, "TK_COMENT_BLOCO", lexema_atual)
   elif lexema_atual in estados['palavrasReservadas']:
     return (lin, col - len(lexema_atual), f"TK_{lexema_atual.upper()}", '')
   else:
+    # Verifica se o lexema atual é um operador ou delimitador
     for operador, nome_operador in estados['operadores']:
         if lexema_atual == operador:
             return (lin, col - len(lexema_atual), f"TK_{nome_operador.upper()}", '')
@@ -32,6 +38,8 @@ def verificar_aceitacao(lin, col, lexema_atual, estado):
   return ()
 
 def getPrimeiraTransicao(simbolo):
+    # Retorna a transição a partir do estado 0 para o símbolo recebido como parâmetro
+
     if simbolo.isdigit():
         return 1
     elif simbolo == ".":
@@ -77,12 +85,12 @@ def getPrimeiraTransicao(simbolo):
     elif simbolo == "\n":
         return 0
     else:
-        return -1
+        return -1 # Símbolo não reconhecido
 
-def ler_token(codigo: str):
+def analisador_lexico(codigo: str):
   """
-  Essa é a função responsável por receber a cadeia de caracteres e retornar uma lista de tokens.
-  O retorno da função é uma tabela de tokens, onde cada token é representado como uma tupla contendo a linha, a coluna, o tipo e o lexema do token.
+  Função responsável por realizar a análise léxica do código fonte, simulando o funcionamento do autômato.
+  O retorno da função é uma lista de tokens, uma lista de erros e um somatório de tokens.
   """
 
   # Estado inicial do autômato
@@ -103,6 +111,10 @@ def ler_token(codigo: str):
   somatorio = {}
 
   for simbolo in codigo:
+    # Realiza a transição de estado de acordo com o simbolo consumido
+    # Cada 'case' representa um estado do autômato e as transições possíveis
+    # semTransicao é uma variável de controle que indica se houve transição de estado ou não
+    # Se não houver transição, o autômato tenta reconhecer o lexema atual
     match (estado):
         case 0:
             if simbolo.isdigit():
@@ -139,10 +151,6 @@ def ler_token(codigo: str):
                 estado = 86
             elif simbolo == ")":
                 estado = 88
-            elif simbolo in ["+", "-", "*", "|", "&", "%", "~", ":", "(", ")"]:
-                tokens.append((lin, col, f"TK_{simbolo.upper()}", simbolo))
-                col += 1
-                continue
             elif simbolo == "#":
                 estado = 79
             elif simbolo in [" ", "\t"]:
@@ -409,9 +417,12 @@ def ler_token(codigo: str):
             erro = True
 
     if (semTransicao):
+        # Se não houver transição de estado, verificar se o lexema atual é um token válido
         if (lexema_atual not in ["", " ", "\n"]):
             token = verificar_aceitacao(lin, col, lexema_atual, estado)
             if (token):
+                # Se o lexema atual for um token válido, adicionar à lista de tokens e incrementar o somatório
+                # Reiniciar o lexema atual e o estado
                 tokens.append(token)
                 if token[2] in somatorio:
                     somatorio[token[2]] += 1
@@ -420,6 +431,8 @@ def ler_token(codigo: str):
                 lexema_atual = ""
                 estado = 0
                 semTransicao = False
+                # Se o símbolo atual for um espaço, incrementar a coluna e continuar a análise
+                # Se o símbolo atual for um \n, incrementar a linha e reiniciar a coluna
                 if simbolo == " ":
                     col += 1
                     continue
@@ -427,11 +440,15 @@ def ler_token(codigo: str):
                     lin += 1
                     col = 1
                     continue
+                # Se o símbolo atual não for um espaço ou \n, tentar realizar a primeira transição de estado
                 estado = getPrimeiraTransicao(simbolo)
             else:
                 erro = True
                 semTransicao = False
         else:
+            # Se o lexema atual for vazio, espaço ou \n, reiniciar o lexema atual e o estado
+            # Se o símbolo atual for um espaço, incrementar a coluna e continuar a análise
+            # Se o símbolo atual for um \n, incrementar a linha e reiniciar a coluna
             if simbolo in [" ", "\t"]:
                 lexema_atual = ""
                 col += 1
@@ -442,6 +459,8 @@ def ler_token(codigo: str):
                 col = 1
                 continue
 
+            # Se o símbolo atual não for um espaço ou \n, tentar realizar a primeira transição de estado
+            # Se o símbolo não for reconhecido, adicionar um erro à lista de erros
             estado = getPrimeiraTransicao(simbolo)
             if (estado == -1):
                 erros.append((lin, col, f"Erro lin {lin} col {col}: simbolo não reconhecido"))
@@ -453,8 +472,8 @@ def ler_token(codigo: str):
             else:
                 semTransicao = False
 
-    # Se ocorrer um erro, imprimir mensagem e reiniciar análise
     if(erro):
+      # Se ocorrer um erro, imprimir mensagem e reiniciar análise
       erros.append((lin, col, f"Erro lin {lin} col {col}: {listaErros[estado]}"))
 
       estado = 0
@@ -472,7 +491,8 @@ def ler_token(codigo: str):
         continue
       else:
         col += 1
-        
+
+      # Se o símbolo atual não for um espaço ou \n, tentar realizar a primeira transição de estado
       estado = getPrimeiraTransicao(simbolo)
       if (estado == -1):
         erros.append((lin, col, f"Erro lin {lin} col {col}: simbolo não reconhecido"))
@@ -483,7 +503,7 @@ def ler_token(codigo: str):
       erro = False
       continue
 
-    # Adicionar o símbolo atual ao lexema e incrementar a coluna
+    # Adicionar o símbolo atual ao lexema, incrementar a coluna ou pular linha e continuar a análise
     lexema_atual += simbolo
     if (simbolo == "\n"):
       lin += 1
@@ -492,7 +512,7 @@ def ler_token(codigo: str):
       col += 1
 
 
-  # Verificar se o estado final é de aceitação
+  # Ao sair do loop, verificar se o estado final para o lexema restante é de aceitação
   if (lexema_atual):
     token = verificar_aceitacao(lin, col, lexema_atual, estado)
     if (token):
@@ -529,6 +549,7 @@ def imprimir_somatorio(dados):
   print("+------------------+------+")
 
 def imprimir_codigo(arquivo, erros):
+    # Função para imprimir o código fonte com os erros
     codigo = open(arquivo, "r").readlines()
     codigo = [linha.strip("\n") for linha in codigo]
     
@@ -550,11 +571,12 @@ def imprimir_codigo(arquivo, erros):
 
 
 def main():
+  # Definir o arquivo a ser analisado
   arquivo = "Ex-01-correto.cic"
 
   codigo = open(arquivo, "r").read()
 
-  tokens, erros, somatorio = ler_token(codigo)
+  tokens, erros, somatorio = analisador_lexico(codigo)
 
   imprimir_codigo(arquivo, erros)
   imprimir_tabela(tokens)

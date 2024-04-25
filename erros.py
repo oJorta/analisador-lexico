@@ -64,6 +64,4 @@ listaErros = {
     84: "delimitador não encontrado",
     86: "delimitador não encontrado",
     88: "delimitador não encontrado",
-
-
 }
